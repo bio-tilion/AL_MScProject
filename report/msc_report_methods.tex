@@ -1,0 +1,133 @@
+\section{Papers metric for tool selection}\label{papers_metric}
+Starting from the review paper by \citeauthor{ohTemporalDynamicMethods2021}, in which the authors describe a list of available tools and dynamic strategies for studying non-periodical and periodical time course data, table \ref{tab:oh} was compiled by collecting all the tools discussed by \citeauthor{ohTemporalDynamicMethods2021}. The ones for handling batch effect have not been included (which are listed in Table 3 of the original paper; see \emph{Original table} column in table \ref{tab:oh}) because batch effects are not taken into account for the scope of the pipeline of this project, but they may be included in future implementations.
+
+\begin{table}[!ht]
+    \centering\footnotesize
+    \input{src/oh2021.tex}
+    \caption[Collection of tools as listed in the paper by \Citeauthor{ohTemporalDynamicMethods2021}]{Collection of tools as listed in the paper by \citet{ohTemporalDynamicMethods2021}. \emph{Type} and \emph{Time course} are two of the labels used to classify the different tools. For convenience, a \emph{DOI} column was included for easy searching.}
+    \label{tab:oh}
+\end{table}
+
+A Python program was then used to select the most relevant tools among the listed ones by accomplishing two major tasks:
+\begin{enumerate}
+    \item searching for databases linked to the publication,
+    \item developing a metric on which papers could be scored.
+\end{enumerate}
+
+The script is a basic wrapper for the NCBI E-utilities \citep{bethesdaEntrezProgrammingUtilities2010} Python implementation within the \texttt{Biopython} module \citep{cockBiopythonFreelyAvailable2009}. For each tool, the listed publication DOI string was used to search the NCBI databases for resources linked to each paper, in the attempt to assess if the datasets used in the publications were made available in public databases, namely NCBI GEO Datasets -- a curated repository of gene expression data -- and NCBI BioProject -- a collection of biological data per project/effort (meaning each entry contains descriptive information about the experimental data, and could link to multiple resources and datasets).
+In order to score the tools, the number of citation for each paper was used to get the average number of citations per year by calculating the difference in days between the current date and the date of publication, and dividing it by the number of days in a year (365.25, accounting for leap years). Note that because of this, every future execution will produce different values. The result is an updated version of the previous table \ref{tab:oh} with six extra columns: PMID (Pubmed ID), publication date (formatted as year-month-day), number of citations, average number of citations per year, GEO Datasets ID, and BioProject ID. Table \ref{tab:oh_metric} shows a shorter version (for readability purpose) of the script output.
+
+\begin{table}[!ht]
+    \centering\footnotesize
+    \input{src/oh2021_metric.tex}
+    \caption[Paper metrics table obtained from table \ref{tab:oh}]{Paper metrics table obtained from table \ref{tab:oh} after running the script \texttt{entrez.py} (see \ref{code}). Tools are listed in descending order by \emph{Average yearly citations}. Some columns have been omitted for readability.}
+    \label{tab:oh_metric}
+\end{table}
+
+\section{DPGP setup}
+The DPGP software is available as a Python program at the GitHub repository \url{https://github.com/PrincetonUniversity/DP_GP_cluster} (last updated 22 September 2017). Since its publication \citep{mcdowellClusteringGeneExpression2018}, it has not been updated, and it looks like it is not actively maintained.
+
+In the repository, it states that it has been tested on GNU/Linux systems with Python 2.7 and Anaconda distributions, so to mirror the installation steps suggested by the authors, a conda environment was created with that specified Python version together with the version of the required packages on which DPGP depends -- \textit{i.e.} \texttt{scikit-learn}, \texttt{pandas}, \texttt{GPy}, \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}, and \texttt{cython}. The environment file was exported with all packages dependencies and made it available in the code repository (see \ref{code}), both in text and YAML format for convenience.
+
+Next, after activating the environment, DPGP is installed from its official GitHub repository using \texttt{pip}. To recreate the installation process, run the following commands:
+\begin{minted}{bash}
+conda create --name dpgp --file DPGP_conda_env.txt
+conda activate dpgp
+pip install git+https://github.com/PrincetonUniversity/DP_GP_cluster.git
+conda deactivate
+\end{minted}
+
+\section{Response to \texorpdfstring{H\textsubscript{2}O\textsubscript{2}}{H2O2} in archaebacterium \textit{Halobacterium salinarum}}
+As test case, \citeauthor{mcdowellClusteringGeneExpression2018} used a real biological dataset previously published by their own group \citep{sharmaRosRTranscriptionFactor2012}, which can be downloaded at the \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE33980}{GEO accession GSE33980}. In that original work, the authors studied the transcriptional response of the archaebacterium \textit{Halobacterium salinarum} to the treatment with hydrogen peroxide. 
+
+The choice of using this dataset was backed by the fact that the original study was conducted in a relatively simple system with a small genome, and the results had a clear biological meaning in response to a single stimulus over time. 
+
+\subsection{Original experimental design}\label{biodata}
+\textit{Halobacterium salinarum} strains were cultured under standard conditions (\SI{37}{\degreeCelsius} for 48 hours under continuous shaking) until the growth rate reached a mid-logarithmic phase. For RNA extraction, \SI{4}{\milli\litre} culture aliquots were removed prior to the addition of \SI{25}{\milli\mole} H\textsubscript{2}O\textsubscript{2}, and at five time points following H\textsubscript{2}O\textsubscript{2} addition -- at 10, 20, 40, 60, and 80 minutes. Each measurement had two technical replicates, accounting for 12 total measurements per strain -- a control strain, termed \emph{ura3}, and a mutant strain, termed either \emph{d258} or \emph{$\Delta$rosR}. The mutant strain has a deletion that results in the absence of the transcription factor rosR, which is found to have a protective effect to oxidative stress, such as the exposure to H\textsubscript{2}O\textsubscript{2}.
+
+Gene expression was evaluated using Agilent microarray systems -- \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL14876}{GEO platform accession GPL14876} -- which contains 2410 non-redundant open reading frames of the \textit{H. salinarum} NRC-1 genome. Raw data were analysed using R Bioconductor \texttt{m-array} \citep{paquetMarrayExploratoryAnalysis2023} and \texttt{limma} packages \citep{ritchieLimmaPowersDifferential2015,smythLimmaLinearModels2023}: background was subtracted using \texttt{normexp}, Loess normalization was performed within each array, and quantile normalization between all arrays. Any probe for each gene lying outside the 99\textsuperscript{th}\% confidence interval was removed using Dixon's test. The remaining probe intensities for each gene were averaged and log2 ratios were calculated, yielding one expression ratio per gene. This processed count table was made available in the GEO Dataset entry supplementary files as \texttt{GSE33980\_average\_data.txt.gz}.
+
+\citeauthor{sharmaRosRTranscriptionFactor2012} then used the Gaggle data analysis web environment \citep{shannonGaggleOpensourceSoftware2006} to perform statistical analysis and differential expression analysis of the data. They identified 626 DEGs which they clustered using a k-means algorithm.
+
+\subsection{Data processing and clustering}\label{preprocess}
+In order to mirror the analysis conducted by \citeauthor{mcdowellClusteringGeneExpression2018}, a series of Python scripts were used to perform the following steps.
+\paragraph{Data collection} A python script -- \texttt{geo\_DPGP.py} -- that uses the GEOparse package \citep{gumiennyGEOparsePythonLibrary2021} to access each GEO Dataset entry provided -- in this case \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE33980}{GEO accession GSE33980} -- and download all the supplementary data listed -- in this case the processed count table \texttt{GSE33980\_average\_data.txt.gz}. A second Python script -- \texttt{gse33980\_suppl.py} -- that extrapolates the list of the names of all 626 DEGs, which was included in an Excel table in the supplementary materials of the paper by \citeauthor{sharmaRosRTranscriptionFactor2012}.
+\paragraph{Data pre-processing} In order to run DPGP, the data have to be formatted in a specific way: each condition -- control and mutant strains -- has to be run separately, and the count table has to be a tab formatted table where the first column contains the gene identifiers (or any other type of label), and the column names must represent each time point. Each replicate has to be separated in its own count table, but they have to be input together to DPGP.
+
+The Python script \texttt{gse33980\_data\_preprocess.py} was written for this purpose. It filters the dataset obtained in the previous step for only the 626 DEGs (which were actually 616), and generates a ``metadata'' table from the measurement labels to ulteriorly subset the data into the desired format: retains only the measurements for the group treated with H\textsubscript{2}O\textsubscript{2}, splits the dataset into the two strains, which it ulteriorly splits into single replicates.
+
+DPGP takes as inputs the list of all the expression count tables replicates, but they must have matching number of time points. In this case, the second replicate of the mutant strain is missing the \SI{20}{\min} time point, which is present in all other conditions. DPGP was run using different inputs combination -- excluding that time point in the mutant group only, or in both groups (data not shown) -- but the results that more closely match the ones from \citeauthor{mcdowellClusteringGeneExpression2018} are obtained by filling the missing measurements using the data from the first replicate. When both strains were treated in this way -- using the same \SI{20}{\min} time point of the first replicate in both tables -- the results were again discordant from the ones obtained in the DPGP paper (data not shown).
+
+\paragraph{Clustering} Finally, a bash script -- \texttt{dpgp\_gse33980\_paper.sh} -- executes DPGP and performs the clustering, using the same flags that corresponds to the parameters used in the paper: \texttt{--fast} will run DPGP in ``fast'' mode, which \citeauthor{mcdowellClusteringGeneExpression2018} used throughout their paper. \texttt{--sigma\_n2\_shape} and \texttt{--sigma\_n2\_rate} are the hyperparameters $\alpha$ and $\beta$ respectively, that can be varied to allow for greater variability by reducing the shape parameter. In the paper, they stated that they used $\alpha=6$ (default 12) and $\beta=2$ (default 2), because these are microarray data. Finally, \texttt{--plot} will output cluster images like the ones shown in the original work (see figure \ref{img:paper}), in the format specified by \texttt{-p}.
+
+\subsection{Results comparison}
+\citeauthor{mcdowellClusteringGeneExpression2018} clustered gene trajectories for each of the control and mutant strains in independent DPGP modelling runs, so to compare them and determine the gene cluster assignment changes in response to the mutation, they computed the Pearson correlation coefficient on all the mean trajectories combinations of clusters. The clusters with the highest coefficients were considered equivalent across the two strains. To test the significance of gene switching between equivalent clusters, the authors used the Fisher's exact test.
+
+In order to reproduce this analysis, the Python script \texttt{gse33980\_dpgp\_results.py} first calculates the mean expression trajectories of each cluster using the posterior cluster model. This script has been adapted from function present in the DPGP code, \texttt{plot.py} in particular. The script also produces single plots for each cluster (used in the section \ref{eq_clust}), instead of the standard graphical output of DPGP, \label{standard_output} which has six cluster plots per image, and alternative similarity matrix images for both strains (without the default dendrogram, see figure \ref{img:heatmap}), and with the gene order rearranged for the mutant strain (see figure \ref{img:heatmap_alt}) to mirror the image shown in figure \ref{img:paper} panel N. Since this script rely on the DPGP Python module, it must be run in the conda environment with the following command:
+\begin{minted}{bash}
+conda run -n dpgp python DPGP/src/gse33980_dpgp_results.py
+\end{minted}
+
+A second Python script was written -- \texttt{gse33980\_dpgp\_analysis.py} -- to calculate the Pearson correlation coefficient -- using the \texttt{pearsonr} function of the Python \texttt{SciPy} module \citep{virtanenSciPyFundamentalAlgorithms2020} -- of all the possible pairs of posterior cluster mean expression trajectories, and determine which are the equivalent clusters by selecting the pair with the highest value of $r$. The matrix of $r$ values of the full pairwise comparisons is shown in table \ref{tab:pearson}. The full 3D matrix of $r$ and $p$ values is saved as a \texttt{numpy} binary file -- \texttt{geo\_correlation\_matrix.npy}.
+
+The same script also extrapolates from the DPGP results (specifically from the optimal clustering output, which is a table containing the list of all genes and their corresponding cluster label) the number of co-clustered genes in each possible pairwise combination of control \textit{vs.} mutant clusters, and produces table \ref{tab:cocluster}, where the highlighted cells correspond to the number of genes that are clustered in the equivalent cluster, meaning that they maintain the same expression behaviour over time.
+Table \ref{tab:cocluster} is used to calculate the contingency tables of the equivalent cluster pairs, which in turn are used to calculate the Fisher's exact test.
+Each contingency table has the following format:
+
+\begin{center}
+\begin{tabular}{>{\bfseries\centering}m{3.5cm} | >{\centering}m{3.5cm} | >{\centering}m{3.5cm} p{0pt}}
+ & \textbf{Belong to mutant cluster \textit{n}} & \textbf{Do NOT belong to mutant cluster \textit{n}} & \\ \hline
+Belong to control cluster \textit{m} & $x$ & $y=row - x$ & \\ \hline
+Do NOT belong to control cluster \textit{m} & $z=col - x$ & $616 - (x+y+z)$ & \\
+\end{tabular}
+\end{center}
+
+Where
+\begin{itemize}
+    \item $x$ is the number of genes belonging to both clusters
+    \item $y$ is the number of remaining genes in the control cluster
+    \item $z$ is the number of remaining genes in the mutant cluster
+    \item the last cell is the number of genes not belonging to any of those two clusters, which correspond to the total number of genes -- \num{616} in this case -- minus the genes in either one of the two clusters $m$ and $n$ 
+\end{itemize}
+
+Finally, a summary of the statistical analysis of the equivalent cluster pairs is produced (see table \ref{tab:eq_clust}), showing for each control cluster which is the equivalent mutant cluster, the Pearson correlation $r$ and $p$ values, and Odds ratio and Fisher's exact test (FET) $p$ value, which are calculated using the \texttt{fisher\_exact} function within the same \texttt{SciPy} module \citep{virtanenSciPyFundamentalAlgorithms2020}. The last column contains the number of genes that show a different gene expression dynamic (also expressed as a percentage of the total number of genes of control cluster), which was calculated from the relative contingency table.
+
+\section{Data simulation}
+Since the pipeline this project is building will perform differential expression analysis using, among other tools, \texttt{ImpulseDE2} \citep{fischerImpulseModelbasedDifferential2018}, DPGP was also tested in this study on toy datasets that have gone through the pipeline. 
+\subsection{Datasets generation}\label{simulation}
+\paragraph{ImpulseDE2 installation} ImpulseDE2 is available as an R package at the GitHub repository (\url{https://github.com/YosefLab/ImpulseDE2}, last updated 14 September 2022), and in Bioconductor version 3.10 (\url{https://bioconductor.org/packages/3.10/bioc/html/ImpulseDE2.html}, version 1.10.0). The package has been removed starting from Bioconductor version 3.13.
+For this reason, ImpulseDE2 has been downloaded from the GitHub repository and included in an R project (available in the repository of this study, see section \ref{code}) using \texttt{renv}, which creates a \texttt{lockfile} containing the information of all the packages used. To recreate the installation process, open the R project \texttt{impulseDE2.Rproj}, and run the following command in an R console:
+\begin{minted}{R}
+renv::restore()
+\end{minted}
+
+\paragraph{Dataset creation and DE analysis} The following steps were recreated from the tutorial present in the \texttt{ImpulseDE2} vignette. In order to produce the simulated datasets to use in this study, the \texttt{simulateDataSetImpulseDE2} function was used, which can generate a specified amount of gene expression vectors modelled according to four possible functions:
+\begin{enumerate}
+    \item \emph{constant}, which produces constant gene count with no effect over time,
+    \item \emph{impulse}, where the effect over time is represented from an initial state that shifts to a ``peak'' state, and to a ``steady'' state,
+    \item \emph{linear}, where the gene counts follow a linear trajectory over time, and
+    \item \emph{sigmoid}, which produces genes counts with a sigmoidal time progression.
+\end{enumerate}
+
+Two datasets were created: one with \num{400} genes using the linear function only (\emph{linear dataset}), and a second one using the constant, impulse, and linear functions with \num{200} genes each, for a total of \num{600} genes (\emph{mixed dataset}). Both datasets have 8 time points and three replicates. These numbers were chosen to have a starting size comparable to the one from the real biological dataset (which has 626 genes, see section \ref{biodata}), and still be relative fast to cluster with DPGP.
+
+DE analysis was performed with the \texttt{runImpulseDE2} function, which in this case -- where no alternative condition has been provided -- compares gene expression levels against a constant expression model with no variations over time. The resulting list of DEG was used in the next step to filter the whole dataset before running DPGP.
+
+\subsection{Clustering and analysis}
+Next, a processing step was performed, similar to the one described in section \ref{preprocess}, which is necessary for running DPGP.
+\paragraph{Data pre-processing}
+The Python script \texttt{simulated\_data\_preprocess.py} reads each of the two datasets -- linear and mixed -- and produces the individual expression matrices for each replicate, which are then provided together as the input of DPGP. For each dataset, the script also creates two alternative sub-datasets: one with the full list of genes, and a second one with only DEGs, for a total of four datasets.
+
+\paragraph{Clustering}
+DPGP was run on each one of these sub-datasets -- with the full list of genes, or only DEGs, from each simulated dataset, linear or mixed -- using the bash script \texttt{dpgp\_simulated.sh}. The parameters used are again similar to the ones used on the biological data: \texttt{--fast} is used to run DPGP in ``fast'' mode, and \texttt{--plot} to produce the standard graphical output in the format specified by \texttt{-p}. The script also iteratively pass a value for the $\alpha$ hyperparameter (\texttt{--sigma\_n2\_shape}), which is used to allow for variability within the data. Not knowing how variable these datasets are (since the \texttt{simulateDataSetImpulseDE2} function also includes dispersion factors), an array of values was chosen: $\alpha=12$ (the default), $9$, $6$ (the value used by \citeauthor{mcdowellClusteringGeneExpression2018}), and $3$.
+
+\paragraph{Result analysis}
+The results of each DPGP run are then reformatted using the Python script \texttt{simu\-lated\_dpgp\_results.py}, which produces the images shown in section \ref{res:simulated}, with similar quality to the one described in section \ref{standard_output}. Since this script rely on the DPGP Python module, it must be run in the conda environment with the following command:
+\begin{minted}{bash}
+conda run -n dpgp python DPGP/src/simulated_dpgp_results.py      
+\end{minted}
+
+Lastly, the Python script \texttt{simulated\_dpgp\_analysis.py} evaluates DPGP ability to capture groups of genes generated by different \texttt{ImpulseDE2} model functions. The script takes advantage of the fact that the genes are in sequential order in the generated dataset, where the first are the number of constant genes, followed by the one generated by the impulse function, then the linear, and finally the sigmoid. The script takes all the DPGP results from the mixed sub-datasets and produces summary tables showing the count of genes per cluster that were generated by the three different functions -- constant, impulse, and linear. The background gradient is the result of a row-wise comparison: the darker the colour, the higher number of genes generated from that function belong to a specific cluster.
+
+\section{Code availability}\label{code}
+All the code used in this dissertation is available at the GitHub repository \url{https://github.com/bio-tilion/AL_MScProject.git}.

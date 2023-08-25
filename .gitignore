@@ -1,0 +1,10 @@
+DPGP/results/*
+
+report/output/*
+!report/output/*.pdf
+report/src/entrez_credentials.py
+
+**.dtd
+**/__pycache__/
+.vscode
+.Rproj.user

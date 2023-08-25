@@ -1,0 +1,64 @@
+library(ImpulseDE2)
+
+## generate linear expression data
+data.linear <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = NULL,
+  vecBatchesB      = NULL,
+  scaNConst        = 0,
+  scaNImp          = 0,
+  scaNLin          = 400,
+  scaNSig          = 0,
+  scaMuBatchEffect = NULL,
+  scaSDBatchEffect = NULL,
+  dirOutSimulation = NULL
+)
+
+# run ImpulseDE2
+objectImpulseDE2.linear <- runImpulseDE2(
+  matCountData    = data.linear$matObservedCounts, 
+  dfAnnotation    = data.linear$dfAnnotation,
+  boolCaseCtrl    = FALSE,
+  vecConfounders  = NULL,
+  scaNProc        = 1 )
+
+# export all data
+if (!dir.exists("../DPGP/data/simulated/linear")){
+  dir.create("../DPGP/data/simulated/linear")
+}else{}
+write.csv(data.linear$dfAnnotation, "../DPGP/data/simulated/linear/dfAnnotation.csv", row.names=FALSE)
+write.csv(data.linear$matObservedCounts, "../DPGP/data/simulated/linear/matObservedCounts.csv")
+write.csv(objectImpulseDE2.linear$dfImpulseDE2Results, "../DPGP/data/simulated/linear/dfImpulseDE2Results.csv", row.names=FALSE)
+
+
+## generate constant + impulse + linear expression data
+data.cil <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = NULL,
+  vecBatchesB      = NULL,
+  scaNConst        = 200,
+  scaNImp          = 200,
+  scaNLin          = 200,
+  scaNSig          = 0,
+  scaMuBatchEffect = NULL,
+  scaSDBatchEffect = NULL,
+  dirOutSimulation = NULL
+)
+
+# run ImpulseDE2
+objectImpulseDE2.cil <- runImpulseDE2(
+  matCountData    = data.cil$matObservedCounts, 
+  dfAnnotation    = data.cil$dfAnnotation,
+  boolCaseCtrl    = FALSE,
+  vecConfounders  = NULL,
+  scaNProc        = 1 )
+
+# export all data
+if (!dir.exists("../DPGP/data/simulated/const_impulse_linear")){
+  dir.create("../DPGP/data/simulated/const_impulse_linear")
+}else{}
+write.csv(data.cil$dfAnnotation, "../DPGP/data/simulated/const_impulse_linear/dfAnnotation.csv", row.names=FALSE)
+write.csv(data.cil$matObservedCounts, "../DPGP/data/simulated/const_impulse_linear/matObservedCounts.csv")
+write.csv(objectImpulseDE2.cil$dfImpulseDE2Results, "../DPGP/data/simulated/const_impulse_linear/dfImpulseDE2Results.csv", row.names=FALSE)

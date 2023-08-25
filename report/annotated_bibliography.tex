@@ -1,0 +1,382 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage[british]{babel}
+\usepackage[hidelinks]{hyperref}
+\usepackage{natbib}
+\usepackage{bibentry}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage[font=small]{caption}
+\usepackage[outputdir=output/]{minted}
+
+\title{Annotated bibliography}
+\author{Alberto Locca}
+
+\nobibliography*
+
+% set temporary length to calculate width of minipage
+\newlength{\templength}
+
+% new environment for sections of each annotated bibliography entry
+\newenvironment{ann_section}[1]
+{\settowidth{\templength}{#1}% set length to width of the section title
+\noindent\textbf{#1}
+\hspace{1em}\begin{minipage}[t]{\dimexpr \linewidth-\the\templength-2em}}
+{\end{minipage}\par\bigskip}
+
+%% format for each entry:
+%% 1. full ref
+%% 2. method (+ assumptions)
+%% 3. code availability
+%% 4. input data
+%% 5. summary
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The overall goal of this project -- for Unilever's internal scope -- is developing a pipeline, using readily available tools, for the analysis of longitudinal RNA-seq data. These data are the results of \textit{in vitro} High Throughput Transcriptomics (HTTr) assays for safety and risk assessment of chemicals, drugs, and products developed by Unilever, in a decade-long effort of developing new approaches that do not involve animal testing.
+
+In order to achieve this goal, we first focused on reviewing the Literature for tools that would satisfy our requirements: we started from a comparative study by \citet{spiesComparativeAnalysisDifferential2019}, in which the authors compare tools developed specifically for differential expression analysis of time course data, both on simulated and biological data. 
+We then focused on a second review paper by \citet{ohTemporalDynamicMethods2021}, in which the authors describe a more comprehensive list of tools and dynamic strategies for studying non-periodical and periodical time course data, \textit{de facto} enriching the list of tools from \citeauthor{spiesComparativeAnalysisDifferential2019}. Table \ref{tab:oh} is a summary of all the tools of interest listed by \citeauthor{ohTemporalDynamicMethods2021}. The tools listed in table 3 (see \emph{Original table} column in table \ref{tab:oh}) have been excluded because they involve batch effects handling, which is not taken into account for the scope of our pipeline, but it may be included in a future implementation.
+
+\begin{table}[!ht]
+\centering\footnotesize
+\input{src/oh2021.tex}
+\caption{Collection of tools as listed in the paper by \citet{ohTemporalDynamicMethods2021}. \emph{Type} and \emph{Time course} are two of the labels used to classify the different tools. For convenience, I added a \emph{DOI} column for easy searching.}
+\label{tab:oh}
+\end{table}
+
+Next, I wanted to automate the process of understanding among these tools which are more suitable for our goal, in a more objective and programmatic way. The three crucial criteria that an ideal tool should have are:
+\begin{itemize}
+    \item Datasets availability; ideally a tool should have been tested and work on publicly available datasets, which could be easily downloaded and are compatible to Unilever's HTTr assays data format (\textit{i.e.} number of time points, biological and technical replicates, conditions, etc.).
+    \item Code availability; as anticipated, the tool has to be readily available, but in order to understand its model assumptions and if it is suited for our applications, also its code must have been made available, with -- ideally -- all the code used to produce the authors' results in its original paper.
+    \item Data reproducibility; most crucially, we must be able to obtain the same -- if not, as similar as possible -- results as the authors' in the original paper of the tool. It also falls under this criterion the ability of a tool to produce a reasonable or expected output when provided with toy or simulated datasets.
+\end{itemize}
+
+I took advantage of the reference list in the paper by \citeauthor{ohTemporalDynamicMethods2021}, from which I extrapolated the DOIs for each of the relevant tools (as shown in table \ref{tab:oh}). I could then use this list of DOIs to cross-search NCBI databases for resources linked to each paper, in the attempt to assess if the datasets used  in the publications were made available in public databases, namely NCBI GEO Datasets -- a curated repository of gene expression data -- and NCBI BioProject -- a collection of biological data per project/effort (meaning each entry contains descriptive information about the experimental data, and could link to multiple resources and datasets). By doing this, I was trying to address the first point, \emph{datasets availability}, but I also wanted to develop a metric to assess the goodness of a tool by looking at the number of citations (averaged by year) of each paper. The script \texttt{entrez.py} (see \ref{script:entrez}) accomplishes these two tasks and produces table \ref{tab:oh_metric}, a revised version of table \ref{tab:oh}.
+
+\begin{table}[!ht]
+\centering\footnotesize
+\input{src/oh2021_metric.tex}
+\caption{Paper metrics table obtained from table \ref{tab:oh} after running the script \texttt{entrez.py} (see \ref{script:entrez}). Tools are listed in descending order by \emph{Average yearly citations}. Some columns have been omitted for readability.}
+\label{tab:oh_metric}
+\end{table}
+
+The principal shortcomings of my approach are the following:
+\begin{enumerate}
+    \item NCBI E-Utilities can perform cross-searches among NCBI databases, but they need to be provided with the relative database ID (\textit{i.e.} PMID to search the Pubmed database). DOI strings are extra fields in a Pubmed entry and can return unexpected results, like for the case of \emph{PairGP} (last row in table \ref{tab:oh_metric}): the Pubmed search returned 0 papers cited the PairGP paper, which could not be the case since it got cited at least once by \citeauthor{ohTemporalDynamicMethods2021}. This issue is due to a double DOI corresponding to the same article: one also present in the NCBI records, and one relative to the biorXiv pre-print, which is not accessible by simply using NCBI E-utilities.
+    \item Number of citations -- and by extent, number of yearly citations -- is not an objective metric for assessing the goodness of a paper, but it gives a rough estimate of the popularity it has among the scientific community. Generally speaking, a more popular tool would get included more often in analytical pipelines than a less popular one, which in turn would result in a more solid consensus. In fact, one of the challenges we are facing is that there is still no consensus for the analysis of longitudinal RNA-seq data, which is also the reason why there is such a large number of tools available.
+    \item Cross-searches among NCBI databases rely on the authors (or the publishers) correctly listing the resources linked to their publication. In this case, very few Pubmed entries also had the GEO Datasets accession linked, despite having it explicitly written in the text or in the supplementary material. Another possible reason for a GEO Datasets entry to not have an article linked to it could be if the data had been submitted well in advance of the publication.
+\end{enumerate}
+
+In spite of these problems, the script returned a reasonable outcome:
+\begin{itemize}
+    \item Interestingly, the tools for the analysis of periodical time courses are among the most popular. It may be because circadian rhythmic and cell-cycling changes have historically been more studied, or because some of these tools have been repurposed from older applications to also adapt to this type of analysis. Either way, since our HTTr assays involve non-periodical time course data, we can disregard those tools.
+    \item Within the non-periodical time course tools, the tools previously suggested by Unilever's external collaborators -- maSigpro and ImpulseDE2 -- are ranked among the highest positions.
+    \item Some tools actually have publicly available datasets linked to their papers.
+\end{itemize}
+
+Given these results, I have decided to review for my annotated bibliography the top three non-periodical time course tools, and the other three tools that have a linked GEO Datasets accession, which are:
+\begin{itemize}
+    \item Next maSigPro,
+    \item Dream,
+    \item ImpluseDE2,
+    \item DPGP,
+    \item TimeMeter,
+    \item PairGP
+\end{itemize}
+
+\section{Tools review}
+% 1
+\subsection{Next maSigpro}
+\begin{ann_section}{Reference}
+\mbox{}\bibentry{nuedaNextMaSigProUpdating2014}
+\end{ann_section}
+
+\begin{ann_section}{Method}
+\paragraph{The model}
+maSigPro was originally developed for the analysis of microarray data. In this paper, the authors present a new adapted version suited for the analysis of RNA-seq data, by changing its model and incorporating generalized linear models. By doing so, the software can model the response variable to more than just Normal distribution, including Poisson, Binomial, Gamma, and Negative Binomial. For RNA-seq data, the recommended default option is Negative binomial.
+
+maSigPro works in two steps: first selects non-flat gene expression profiles, then creates the best regression models for all the genes by calculating the goodness of fit $R^2$, which can be defined as the percentage of deviance explained by the model.
+
+There is no normalization step, so the data must be normalized first.
+
+\paragraph{Validation}
+The software has been validated on simulated datasets -- created with a Negative binomial distribution -- in comparison with edgeR. These synthetic data have been modelled to reflect three scenarios: increase expression of all DEGs, half DEGs increase and half decrease, and initial upregulation followed by decrease expression. They also had multiple replicates (up to 5) and up to two time courses.
+
+The authors also analysed a real dataset previously published describing the transcriptional response of thale cress to powdery mildew. After an initial analysis, they ran the tool on data corresponding to four time points with two series.
+\end{ann_section}
+
+\begin{ann_section}{Code}
+The software is available as an R package within Bioconductor (\url{https://bioconductor.org/packages/release/bioc/html/maSigPro.html}). It is actively maintained and updated. The current version is 1.72.0 (last updated 25 April 2023).
+\end{ann_section}
+
+\begin{ann_section}{Data}
+The script returned no GEO Dataset ID. In the paper, the authors list a previously published dataset that can be accessed with \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE43163}{GEO accession GSE43163}.
+\end{ann_section}
+
+\begin{ann_section}{Summary}
+maSigPro is routinely used in the analysis of time-dependant RNA-seq data, which promotes it to a potential candidate for the differential expression analysis step in our pipeline.
+It can be easily implemented since it is in Bioconductor, and it also has a descriptive user guide to refer to for example usage.
+
+It can visualize its results and perform clustering.
+
+A potential negative aspect is that the data need to be normalized first.
+\end{ann_section}
+
+% 6
+\subsection{Dream}
+\begin{ann_section}{Reference}
+\mbox{}\bibentry{hoffmanDreamPowerfulDifferential2021}
+\end{ann_section}
+
+\begin{ann_section}{Method}
+\paragraph{The model} Dream (\underline{d}ifferential expression for \underline{re}pe\underline{a}ted \underline{m}easures) has been developed to address differential expression analysis of data with multiple measurements per condition -- \textit{e.g.} time points in our case, biological or technical replicates, etc. -- by accounting for the correlation between the repeated observations.
+
+Dream is based on an ``existing'' linear mixed model using the \texttt{limma} R package and its function \texttt{duplicateCorrelation}, which estimates a single genome-wide within-group variance, at the cost of reducing power and increasing the false-positive rate. The model then allows the variance to change among genes via an iterative optimization algorithm, which approximates degrees of freedom for hypothesis testing to reduce false positives.
+
+\paragraph{Validation} The software has been run on simulated datasets (4-50 individuals each with 2-4 biological replicates) and compared against similar workflows (\texttt{duplicateCorrelation} from the \texttt{limma}/\texttt{voom} workflow, and \texttt{macau2}) and differential expression methods that do not account for repeated measurements (\texttt{DESeq2} and \texttt{limma}/\texttt{voom}). In all cases, dream outperformed the other methods, while accurately controlling the type I error.
+
+The authors then tested dream on different real datasets:
+\begin{itemize}
+    \item an RNA-seq study on 4 regions of post-mortem brains from 26 individuals with Alzheimer's disease, correctly identifying known dysregulated patterns;
+    \item an RNA-seq study on iPSC-derived neurons and neural progenitor cells from 11 patients with childhood onset schizophrenia and 11 controls with up to 3 lines per donor and cell type;
+    \item a microarray study on iPSC and derived cell types from 2 individuals affected by Timothy syndrome and 4 unaffected, with up to 6 lines per donor per cell type;
+    \item large scale RNA-seq datasets from the post-mortem human brains from the CommonMind Consortium and whole blood from Depression Genes and Networks, to assess if the expression variation across individuals is driven by genetic regulation.
+\end{itemize}
+\end{ann_section}
+
+\begin{ann_section}{Code}
+The software is available as part of the R package \texttt{variancePartition} within Bioconductor (\url{http://bioconductor.org/packages/release/bioc/html/variancePartition.html}). It is actively maintained and updated. The current version is 1.30.2 (last updated 7 June 2023).
+
+All the code used to produce the results as shown in the paper is available at \url{https://github.com/GabrielHoffman/dream_analysis}.
+\end{ann_section}
+
+\begin{ann_section}{Data}
+The script returned no GEO Dataset ID. In the main text, the authors reported using real biological data. In the supplementary data, authors listed several datasets from previously published works that can be accessed with
+\begin{itemize}
+    \item \href{https://www.synapse.org/#!Synapse:syn9907463}{Synapse datasharing ID syn9907463}
+    \item \href{https://www.synapse.org/#!Synapse:syn3159438}{Synapse datasharing ID syn3159438}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE25542}{GEO accession GSE25542}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE79636}{GEO accession GSE79636}
+    \item \href{https://www.ncbi.nlm.nih.gov/sra?term=SRP047194}{SRA accession SRP047194}, also available at \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE90749}{GEO accession GSE90749}
+\end{itemize}
+
+Note: Synapse data sharing platform requires an account to access the data.
+\end{ann_section}
+
+\begin{ann_section}{Summary}
+Despite the very questionable acronym, dream is presented as a very solid tool, build on top of routinely used packages and applying state-of-the-art practices in RNA-seq data analysis. Its strength lies in the ``correction'' step which accounts for the otherwise higher false positive rate.
+
+Unlike other methods for analysing RNA-seq data, dream models counts on a weighted linear model instead of a generalized linear mixed model, and giving better hypothesis testing as a result. Because of this, it could be very easily implemented inside pre-existing pipelines since it uses \texttt{limma}, which is the go-to standard for analysing microarray and RNA-seq data, and all these packages are part of Bioconductor and very well documented.
+
+Another positive aspect is the presence of the code used in the paper, so reproducing the original results should be quite straightforward.
+
+Negative aspects could be that the data needs to be normalized first, and that it is not clear to me if this model is suited for modelling time series data, since throughout the paper the authors only used measurement repetition of conditions (replicates, number of individuals, cell types, tissue type), but never time points. I assume that the variation between time points could be modelled like any other condition, but it is only mentioned and never shown.
+
+Overall, this is a very interesting tool for differential expression analysis worth looking into.
+\end{ann_section}
+
+% 2
+\subsection{ImpluseDE2}
+\begin{ann_section}{Reference}
+\mbox{}\bibentry{fischerImpulseModelbasedDifferential2018}
+\end{ann_section}
+
+\begin{ann_section}{Method}
+\paragraph{The model} ImpulseDE2 is the successor of ImpulseDE, and it models gene expression trajectories over time using a pulse function. This function represents the transition between an initial state to a ``peak'' state, to a ``steady'' state.
+
+The differential expression analysis is based on the model fits with a log-likelihood ratio test.
+
+The software assumes the number of reads are negative binomially distributed. When supplying normalized data, the user needs to check that the assumptions for the negative binomial distribution are not violated.
+
+ImpulseDE2 can perform two types of differential expression analysis:
+\begin{itemize}
+    \item case-only, where the impulse fit is compared against a constant fit, so the software looks for changes over time;
+    \item case-control, where two time courses are provided, and the software uses a null model with a function that fits both against an alternative model with two fits for each time course. 
+\end{itemize}
+\paragraph{Validation} The authors tested ImpulseDE2 against ImpulseDE, \texttt{DESeq2}, and \texttt{limma} using 7 different biological datasets. 
+\end{ann_section}
+
+\begin{ann_section}{Code}
+The software is available as an R package at the GitHub repository (\url{https://github.com/YosefLab/ImpulseDE2}, last updated 14 September 2022), and in Bioconductor version 3.10 (\url{https://bioconductor.org/packages/3.10/bioc/html/ImpulseDE2.html}, version 1.10.0). ImpulseDE2 package has been removed starting from Bioconductor version 3.13.
+
+It looks like it is not actively maintained.
+\end{ann_section}
+
+\begin{ann_section}{Data}
+The script returned no GEO Dataset ID. In the main text, the authors report a table with the 7 datasets they used. In the supplementary material, they listed in detail how to access them:
+\begin{itemize}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE84874}{GEO accession GSE84874}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE75748}{GEO accession GSE75748}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE59636}{GEO accession GSE59636}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE59784}{GEO accession GSE59784}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE78167}{GEO accession GSE78167}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE57439}{GEO accession GSE57439}
+    \item full list of SRR run IDs used to download the FASTQ files (omitted in this document) 
+\end{itemize}
+\end{ann_section}
+
+\begin{ann_section}{Summary}
+The authors showed that ImpulseDE2 is suitable for the analysis of time series RNA-seq, as well as ChIP-seq and ATAC-seq. Although they claim the software outperforms the other tools, their results seem to show that it has comparable performances or sometime slightly worse, but ImpulseDE2 is implemented to perform well out-of-the-box, whether all other tools had to be used with non-standard settings.
+
+The model seems to recapitulate expression variations over time as a single maximum or minimum per gene, which I think could be a little reductive. Another negative aspect is that it is poorly maintained, and it is no longer in Bioconductor, but the package seems to be very well documented.
+\end{ann_section}
+
+% 3
+\subsection{DPGP}
+\begin{ann_section}{Reference}
+\mbox{}\bibentry{mcdowellClusteringGeneExpression2018}
+\end{ann_section}
+
+\begin{ann_section}{Method}
+\paragraph{The model} DPGP is a clustering tool for time series analysis of transcriptional data. It uses a Dirichlet process to estimate the number of clusters, and a Gaussian process for modelling time series dependency. Given this mixed model, the software then uses a Markov chain Monte Carlo method to estimate the posterior probability distribution of a certain gene to belong to a certain cluster according to the DP prior and with the likelihood according to the cluster GP distribution. 
+\paragraph{Validation} The authors have tested DPGP on 620 simulated datasets, and compared the results with other clustering methods.
+
+They also showed that they were able to recapitulate similar previously published results on a biological dataset of a bacterial response to oxygen peroxide, and they showed how DPGP can be used on a novel dataset from a study on the glucocorticoid response in a human cell line. In the latter, the software clustering correlated with transcription factor occupancy and histone modification, with a clear biological interpretation.
+\end{ann_section}
+
+\begin{ann_section}{Code}
+The software is available as a Python program at the GitHub repository \url{https://github.com/PrincetonUniversity/DP_GP_cluster} (last updated 22 September 2017). Since its publication, it has not been updated.
+
+It looks like it is not actively maintained.
+\end{ann_section}
+
+\begin{ann_section}{Data}
+The script returned a GEO Dataset ID, which links to the \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE104714}{GEO accession GSE104714}. In the main text, there is a second dataset listed from a previously published paper that can be accessed with \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE33980}{GEO accession GSE33980}.
+\end{ann_section}
+
+\begin{ann_section}{Summary}
+DPGP is a clustering tool designed to overcome two problems of classical clustering methods:
+\begin{enumerate}
+    \item the need to specify a number of clusters,
+    \item time points are assumed to be independent of each other.
+\end{enumerate}
+
+I believe it could be a useful addition to our pipeline, in particular for visualizing the results of a differential expression analysis step. It could also be used to subset the list of DEGs for later stages, \textit{i.e.} pathway analysis.
+
+The fact that the software is not maintained and developed is the main negative aspect, but the authors provided the software and enough information so that it should be possible to easily reproduce their results and eventually include DPGP in our pipeline.  
+\end{ann_section}
+
+% 4
+\subsection{TimeMeter}
+\begin{ann_section}{Reference}
+\mbox{}\bibentry{jiangTimeMeterAssessesTemporal2020}
+\end{ann_section}
+
+\begin{ann_section}{Method}
+\paragraph{The model} TimeMeter uses the dynamic time warping algorithm -- originally developed for speech recognition, and available as the R package \texttt{dtw} -- to assess temporal similarity among genes.
+
+The software assumes the sequences are comparable, so all indices must be matched. Alternatively, it could be used a smaller time window so that the mismatched time points are not taken into consideration. TimeMeter then calculate 4 metrics on the matched alignments produced by \texttt{dtw}:
+\begin{enumerate}
+    \item percentage of alignment for the query,
+    \item percentage of alignment for the reference,
+    \item aligned gene expression correlation, and
+    \item likelihood of alignment arising by chance.
+\end{enumerate}
+
+Temporal patterns for each gene pair are then scored by the slopes in segmented piecewise regression, indicating the velocity of dynamic changes (with 1 meaning no changes).
+\paragraph{Validation} The authors have tested TimeMeter on simulated datasets, and on previously published biological ones:
+\begin{itemize}
+    \item a comparative study between axolotl and Xenopus early embryonic development
+    \item a comparative study between human and mouse embryonic gene expression during neural differentiation
+    \item a comparative study between mouse digit regeneration and axolotl blastema differentiation at amputation site
+\end{itemize}
+\end{ann_section}
+
+\begin{ann_section}{Code}
+The software is available as an R package at the website \url{http://www.morgridge.net/TimeMeter.html} (version 1.0.4).
+\end{ann_section}
+
+\begin{ann_section}{Data}
+The script returned a GEO Dataset ID, which links to the \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE130438}{GEO accession GSE130438}. In the main text, the authors mention other datasets they had previously published, and they analysed again with TimeMeter. They do not provide any accession number, but by looking up the original papers it is possible to access those datasets with
+\begin{itemize}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE78034}{GEO accession GSE78034}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE65785}{GEO accession GSE65785}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE90053}{GEO accession GSE90053}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE34394}{GEO accession GSE34394}
+    \item \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE92429}{GEO accession GSE92429}
+\end{itemize}  
+\end{ann_section}
+
+\begin{ann_section}{Summary}
+It is my understanding that this software basically performs pairwise comparison of temporal trajectories. It is unclear to me what other assumption the \texttt{dtw} package has, and how valuable TimeMeter output is.
+
+Besides this, it seems to be a somewhat obscure tool that has not been used from others but its developers.
+\end{ann_section}
+
+% 5
+\subsection{PairGP}
+\begin{ann_section}{Reference}
+\mbox{}\bibentry{vantiniPairGPGaussianProcess2022}
+\end{ann_section}
+
+\begin{ann_section}{Method}
+\paragraph{The model} PairGP has been developed for modelling longitudinal time series using a non-linear, non-stationary and non-parametric method, by implementing Gaussian processes that can account for paired experimental designs.
+
+Gene expression is considered separately, log transformed and modelled as a combination of
+\begin{itemize}
+    \item a response model, chosen among all the possible partitionings by the largest marginal likelihood;
+    \item a pairing model, which models the deviation from the response model, it is shared by all measurements of batches or replicates, and its cumulative sum is constrained to 0;
+    \item random noise.
+\end{itemize}
+
+In the ``base model'', all possible partitionings are scored and combined to obtain the response function. In this implementation -- which is similar to previous implementations of Gaussian processes -- the ``pairing effect'' is not modelled.
+
+\paragraph{Validation} The authors have tested PairGP on simulated datasets with 9 time points, 3 or 4 conditions, 3 replicates, and a total of 1000 genes, comparing its performance between the regular model and the same model but without ``pairing effect''. They showed PairGP implementation is better when the variance is larger.
+
+They also used PairGP on real longitudinal datasets:
+\begin{itemize}
+    \item human T-helper cell differentiation microarray data, with 2 treatments, 9 time points, and 3 technical replicates (cell cultures)
+    \item Mouse T-helper cell differentiation RNA-seq data, with 5 treatments, 9 time points, and 6 cell cultures, each with 3 technical replicates
+\end{itemize}
+\end{ann_section}
+
+\begin{ann_section}{Code}
+The software is available as a Python program at the GitHub repository \url{https://github.com/michelevantini/PairGP} (last updated 17 October 2021). Since its publication, it has not been updated.
+
+It looks like it is not actively maintained.
+\end{ann_section}
+
+\begin{ann_section}{Data}
+The script returned a GEO Dataset ID, which links to the \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE154467}{GEO accession GSE154467}. In the main text, there is a second dataset listed from a previously published paper that can be accessed with \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE18017}{GEO accession GSE18017}.
+\end{ann_section}
+
+\begin{ann_section}{Summary}
+This study is basically a proof-of-concept. The authors did not compare the performance of PairGP to any other software, despite listing other publications in which Gaussian process methods had been used, but only against their own implementation of a ``standard'' Gaussian process method.
+
+PairGP output a partition frequency, which could be used to interpret the differential expression between all possible conditions. It is unclear to me if it can also output another statistics to assess the degree of differential expression. In the paper, the authors also did not compare their findings to any other biological interpretation, so it is not clear if their results are in line with prior knowledge about T cell differentiation.
+
+In the repository, it is also provided a tutorial notebook, but it is very minimalistic, and there is no other documentation provided.
+
+Overall I would not consider this tool for our pipeline, but it is worth looking into to understand possible implementations of Gaussian processes.
+\end{ann_section}
+
+% \newpage
+\section{Appendices}
+\setminted{fontsize=\footnotesize, xleftmargin=25pt, numbers=left, breaklines} % breakanywhere}
+\subsection{Paper metric}
+The following script -- \texttt{entrez.py} -- produces the full table \ref{tab:oh_metric} as output. It assumes the presence of a file containing the user's NCBI credentials (please refer to this guide \url{https://support.nlm.nih.gov/knowledgebase/article/KA-05317/en-us}) to pass to E-utilities, called \texttt{entrez\_credential.py} with the following format:
+\begin{minted}{python}
+email = "USER_EMAIL"
+api_key = "USER_API_KEY"
+\end{minted}
+
+\texttt{entrez.py} script:
+\label{script:entrez}
+\inputminted{python}{src/entrez.py}
+
+\subsection{\LaTeX{} table output}
+The following script -- \texttt{tables.py} -- produces the two \LaTeX{} formatted tables included in this document, starting from the output of the previous script, \texttt{entrez.py} (see \ref{script:entrez}).
+\label{script:table}
+\inputminted{python}{src/tables.py}
+
+% \newpage
+\bibliographystyle{natbib}
+\bibliography{annotated_bibliography}
+
+\end{document}

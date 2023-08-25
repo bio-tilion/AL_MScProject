@@ -1,0 +1,54 @@
+% Copyright note: This package defines how titles should
+% be typeset at the columbidae University
+% Please check for updates
+\ProvidesPackage{bbkTitle}[2023/08/25 v.01 copied example from wikibooks]
+\RequirePackage{graphicx}
+
+% \newcommand*{\supervisor}[1]{\gdef\@supervisor{#1}%
+% }
+\newcommand*{\supervisor}[3]{%
+  \ifdefined\@supervisorList
+    \g@addto@macro\@supervisorList{\protect\supervisoritem{#1}{#2}{#3}}% Store each pair as a sub-list
+  \else
+    \newcommand\@supervisorList{\protect\supervisoritem{#1}{#2}{#3}}% Initialize with the first pair
+  \fi
+}
+
+\newcommand{\supervisoritem}[3]{%
+  {\textbf{#1}}\par
+  position: #2\par
+  email: #3\par\medskip
+}
+
+\renewcommand*{\maketitle}{%
+\newlength{\bbk}
+\begin{titlepage}
+\centering
+\vspace{2.5cm}
+{\huge\bfseries\@title\unskip\strut\par}
+\vspace{2cm}
+{\Large\@author\unskip\strut\par}
+\vspace{3cm}
+{
+    \settowidth{\bbk}{\large\textbf{Birkbeck, University of London}}
+    \parbox{2cm}{\includegraphics[width=2cm]{bbk.png}}
+    \parbox{\bbk}{
+        {\large\textbf{Birkbeck, University of London}}\par
+        School of Natural Sciences\par\smallskip
+
+        {\large MSc Bioinformatics, 2022-2023}
+    }\par
+}
+\vfill
+\raggedright\large
+{
+    Supervised by\par\medskip
+    \@supervisorList
+    % \@supervisor\unskip\strut\par
+}
+\vspace{2.5cm}
+
+% {\large \@date\par}
+\end{titlepage}
+}
+\endinput

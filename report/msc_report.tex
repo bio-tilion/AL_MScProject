@@ -1,0 +1,70 @@
+\documentclass[10pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{setspace}
+\usepackage[british]{babel}
+\usepackage[hidelinks]{hyperref}
+\usepackage{array}
+\usepackage{rotating}
+\usepackage{natbib}
+\usepackage{bibentry}
+%\usepackage{chemfig}
+%\usepackage[version=4]{mhchem}
+\usepackage{siunitx}
+\usepackage[table]{xcolor}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage[font=small]{caption}
+%\usepackage{newfloat}
+%\usepackage{adjustbox}
+%\usepackage{tocloft}
+%\usepackage{cleveref}
+\usepackage{bbkTitle}
+\usepackage[outputdir=output/]{minted}
+\usepackage{etoolbox}
+\apptocmd{\sloppy}{\hbadness 10000\relax}{}{}
+
+\newlength{\mytablewidth}
+
+\onehalfspacing
+
+% structure:
+% 0. title
+% 1. abstract
+% 2. contents (chapters, sections, tables and figures)
+% 3. introduction
+% 4. materials and methods
+% 5. results
+% 6. discussion and conclusions
+% 7. references
+
+\begin{document}
+
+\pagenumbering{arabic}
+\input{msc_report_title.tex}
+\input{msc_report_abstract.tex}
+
+\setcounter{page}{3}
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter{Introduction}
+\input{msc_report_intro.tex}
+
+\chapter{Materials and Methods}
+\input{msc_report_methods.tex}
+
+\chapter{Results}
+\input{msc_report_results.tex}
+
+\chapter{Discussion}
+\input{msc_report_discussion.tex}
+
+\newpage
+% References
+\bibliographystyle{natbib}
+\bibliography{msc_report}
+
+\end{document}

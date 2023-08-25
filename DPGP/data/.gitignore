@@ -1,0 +1,7 @@
+*
+!.gitignore
+
+!GEO_acc_list.txt
+!simulated/
+!simulated/**/
+!simulated/**/*.csv
